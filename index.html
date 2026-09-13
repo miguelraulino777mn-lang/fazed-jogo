@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Velha</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #2C3E50, #4CA1AF);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #2C3E50;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+
+        /* Menu de dificuldade */
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .menu p {
+            color: #BDC3C7;
+            margin-bottom: 10px;
+        }
+
+        .btn-dificuldade {
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+        }
+
+        .btn-dificuldade:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.15);
+        }
+
+        .facil { background: #27AE60; }
+        .medio { background: #F39C12; }
+        .dificil { background: #E74C3C; }
+
+        /* Placar */
+        .placar {
+            color: white;
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+
+        /* Status */
+        .status {
+            color: #F1C40F;
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            min-height: 24px;
+        }
+
+        /* Tabuleiro */
+        .tabuleiro {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .casa {
+            aspect-ratio: 1;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 48px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .casa:hover:not(:disabled) {
+            background: #D5DBDB;
+            transform: scale(1.03);
+        }
+
+        .casa:disabled {
+            cursor: not-allowed;
+        }
+
+        .casa.x {
+            color: #E74C3C;
+        }
+
+        .casa.o {
+            color: #3498DB;
+        }
+
+        .casa.vencedora {
+            background: #F9E79F !important;
+            animation: brilho 0.6s infinite alternate;
+        }
+
+        @keyframes brilho {
+            from { box-shadow: 0 0 5px #F9E79F; }
+            to { box-shadow: 0 0 20px #F1C40F; }
+        }
+
+        /* Botões inferiores */
+        .acoes {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-acao {
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+
+        .btn-acao:hover {
+            filter: brightness(1.15);
+        }
+
+        .novo { background: #27AE60; }
+        .menu-btn { background: #3498DB; }
+
+        .escondido {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Jogo da Velha 🎮</h1>
+
+        <!-- Menu de dificuldade -->
+        <div id="menu" class="menu">
+            <p>Escolha a dificuldade do bot:</p>
+            <button class="btn-dificuldade facil" onclick="iniciarJogo('facil')">😊 Fácil</button>
+            <button class="btn-dificuldade medio" onclick="iniciarJogo('medio')">😐 Médio</button>
+            <button class="btn-dificuldade dificil" onclick="iniciarJogo('dificil')">😈 Difícil</button>
+        </div>
+
+        <!-- Jogo -->
+        <div id="jogo" class="escondido">
+            <div class="placar" id="placar"></div>
+            <div class="status" id="status">Sua vez!</div>
+
+            <div class="tabuleiro" id="tabuleiro">
+                <!-- As 9 casas serão criadas pelo JavaScript -->
+            </div>
+
+            <div class="acoes">
+                <button class="btn-acao novo" onclick="novoJogo()">🔄 Novo Jogo</button>
+                <button class="btn-acao menu-btn" onclick="voltarMenu()">⚙️ Dificuldade</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== VARIÁVEIS DO JOGO =====
+        let tabuleiro = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
+        let jogadorAtual = 'X';
+        let jogoAtivo = true;
+        let dificuldade = 'medio';
+        let placar = { X: 0, O: 0, Empate: 0 };
+
+        // Combinações vencedoras
+        const COMBINACOES = [
+            [0,1,2], [3,4,5], [6,7,8],   // linhas
+            [0,3,6], [1,4,7], [2,5,8],   // colunas
+            [0,4,8], [2,4,6]              // diagonais
+        ];
+
+        // ===== CRIAR TABULEIRO =====
+        const tabuleiroEl = document.getElementById('tabuleiro');
+        const casas = [];
+
+        for (let i = 0; i < 9; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'casa';
+            btn.dataset.posicao = i;
+            btn.addEventListener('click', () => clicarCasa(i));
+            tabuleiroEl.appendChild(btn);
+            casas.push(btn);
+        }
+
+        // ===== INICIAR JOGO =====
+        function iniciarJogo(nivel) {
+            dificuldade = nivel;
+            document.getElementById('menu').classList.add('escondido');
+            document.getElementById('jogo').classList.remove('escondido');
+            placar = { X: 0, O: 0, Empate: 0 };
+            novoJogo();
+        }
+
+        function voltarMenu() {
+            document.getElementById('jogo').classList.add('escondido');
+            document.getElementById('menu').classList.remove('escondido');
+        }
+
+        function novoJogo() {
+            tabuleiro = [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
+            jogadorAtual = 'X';
+            jogoAtivo = true;
+
+            casas.forEach(casa => {
+                casa.textContent = '';
+                casa.className = 'casa';
+                casa.disabled = false;
+            });
+
+            atualizarStatus('Sua vez!', '#F1C40F');
+            atualizarPlacar();
+        }
+
+        // ===== CLIQUE DO JOGADOR =====
+        function clicarCasa(posicao) {
+            if (!jogoAtivo || jogadorAtual !== 'X' || tabuleiro[posicao] !== ' ') return;
+
+            fazerJogada(posicao, 'X');
+
+            if (verificarFim()) return;
+
+            jogadorAtual = 'O';
+            atualizarStatus('Bot pensando...', '#3498DB');
+
+            setTimeout(jogadaBot, 500);
+        }
+
+        // ===== FAZER JOGADA =====
+        function fazerJogada(posicao, jogador) {
+            tabuleiro[posicao] = jogador;
+            casas[posicao].textContent = jogador;
+            casas[posicao].classList.add(jogador.toLowerCase());
+            casas[posicao].disabled = true;
+        }
+
+        // ===== VERIFICAR FIM =====
+        function verificarFim() {
+            const vencedor = verificarVencedor();
+
+            if (vencedor) {
+                jogoAtivo = false;
+                placar[vencedor]++;
+                atualizarPlacar();
+
+                // Destacar casas vencedoras
+                COMBINACOES.forEach(c => {
+                    if (tabuleiro[c[0]] === vencedor &&
+                        tabuleiro[c[1]] === vencedor &&
+                        tabuleiro[c[2]] === vencedor) {
+                        c.forEach(pos => casas[pos].classList.add('vencedora'));
+                    }
+                });
+
+                if (vencedor === 'X') {
+                    atualizarStatus('🎉 Você venceu! 🎉', '#27AE60');
+                } else {
+                    atualizarStatus('🤖 Bot venceu! 🤖', '#E74C3C');
+                }
+                return true;
+            }
+
+            if (!tabuleiro.includes(' ')) {
+                jogoAtivo = false;
+                placar.Empate++;
+                atualizarPlacar();
+                atualizarStatus('🤝 Empate! 🤝', '#F39C12');
+                return true;
+            }
+
+            return false;
+        }
+
+        function verificarVencedor() {
+            for (const c of COMBINACOES) {
+                if (tabuleiro[c[0]] !== ' ' &&
+                    tabuleiro[c[0]] === tabuleiro[c[1]] &&
+                    tabuleiro[c[1]] === tabuleiro[c[2]]) {
+                    return tabuleiro[c[0]];
+                }
+            }
+            return null;
+        }
+
+        // ===== JOGADA DO BOT =====
+        function jogadaBot() {
+            if (!jogoAtivo) return;
+
+            const posicao = escolherJogadaBot();
+
+            if (posicao !== -1) {
+                fazerJogada(posicao, 'O');
+            }
+
+            if (verificarFim()) return;
+
+            jogadorAtual = 'X';
+            atualizarStatus('Sua vez!', '#F1C40F');
+        }
+
+        function escolherJogadaBot() {
+            const disponiveis = tabuleiro
+                .map((v, i) => v === ' ' ? i : null)
+                .filter(v => v !== null);
+
+            if (disponiveis.length === 0) return -1;
+
+            if (dificuldade === 'facil') {
+                if (Math.random() < 0.7) return aleatoria(disponiveis);
+                return minimaxEscolha();
+            } else if (dificuldade === 'medio') {
+                if (Math.random() < 0.3) return aleatoria(disponiveis);
+                return minimaxEscolha();
+            } else {
+                return minimaxEscolha();
+            }
+        }
+
+        function aleatoria(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function minimaxEscolha() {
+            let melhorValor = -Infinity;
+            let melhorPosicao = -1;
+
+            for (let i = 0; i < 9; i++) {
+                if (tabuleiro[i] === ' ') {
+                    tabuleiro[i] = 'O';
+                    const valor = minimax(tabuleiro, 0, false);
+                    tabuleiro[i] = ' ';
+
+                    if (valor > melhorValor) {
+                        melhorValor = valor;
+                        melhorPosicao = i;
+                    }
+                }
+            }
+            return melhorPosicao;
+        }
+
+        function minimax(tab, profundidade, maximizando) {
+            for (const c of COMBINACOES) {
+                if (tab[c[0]] !== ' ' &&
+                    tab[c[0]] === tab[c[1]] &&
+                    tab[c[1]] === tab[c[2]]) {
+                    return tab[c[0]] === 'O' ? 10 - profundidade : profundidade - 10;
+                }
+            }
+
+            if (!tab.includes(' ')) return 0;
+
+            if (maximizando) {
+                let melhor = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tab[i] === ' ') {
+                        tab[i] = 'O';
+                        const valor = minimax(tab, profundidade + 1, false);
+                        tab[i] = ' ';
+                        melhor = Math.max(melhor, valor);
+                    }
+                }
+                return melhor;
+            } else {
+                let melhor = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tab[i] === ' ') {
+                        tab[i] = 'X';
+                        const valor = minimax(tab, profundidade + 1, true);
+                        tab[i] = ' ';
+                        melhor = Math.min(melhor, valor);
+                    }
+                }
+                return melhor;
+            }
+        }
+
+        // ===== ATUALIZAÇÕES DE TELA =====
+        function atualizarStatus(texto, cor) {
+            const el = document.getElementById('status');
+            el.textContent = texto;
+            el.style.color = cor;
+        }
+
+        function atualizarPlacar() {
+            const nomes = { facil: 'Fácil', medio: 'Médio', dificil: 'Difícil' };
+            document.getElementById('placar').textContent =
+                `Você: ${placar.X}  |  Bot (${nomes[dificuldade]}): ${placar.O}  |  Empates: ${placar.Empate}`;
+        }
+    </script>
+</body>
+</html>
