@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiguelLang - Tradutor de Português pra Lua</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f0f17;
+    color: #fff;
+    font-family: -apple-system, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 15px;
+  }
+  .caixa {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 28px;
+    text-align: center;
+    margin-bottom: 5px;
+    background: linear-gradient(90deg, #00ff9d, #00aaff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub {
+    text-align: center;
+    color: #8888aa;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .secao {
+    background: #1a1a26;
+    border-radius: 14px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  .label {
+    color: #00ff9d;
+    font-size: 13px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    background: #0a0a10;
+    color: #00ff9d;
+    border: 2px solid #2a2a38;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
+  }
+  textarea:focus { border-color: #00ff9d; }
+  textarea.saida { color: #00aaff; }
+  .botoes {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  button {
+    flex: 1;
+    background: linear-gradient(90deg, #00ff9d, #00aaff);
+    color: #0f0f17;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  button.secundario {
+    background: #2a2a38;
+    color: #fff;
+  }
+  button:active { transform: scale(0.97); }
+  .ajuda {
+    background: #1a1a26;
+    border-radius: 14px;
+    padding: 15px;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .ajuda h3 {
+    color: #00ff9d;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .ajuda code {
+    background: #0a0a10;
+    color: #00ff9d;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+  }
+  .ajuda .comando {
+    color: #8888aa;
+    margin-bottom: 4px;
+  }
+  .aviso {
+    background: #2a2020;
+    border-left: 3px solid #ffaa00;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #ffcc88;
+    margin-bottom: 15px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+  <div class="caixa">
+    <h1>🎨 MiguelLang</h1>
+    <p class="sub">Escreva em português, vire Lua</p>
+
+    <div class="secao">
+      <div class="label">✏️ Escreva em português</div>
+      <textarea id="entrada" placeholder="diz &quot;Olá, mundo!&quot;
+espera 1
+diz &quot;Tô programando!&quot;
+cria parte &quot;minhaParte&quot;"></textarea>
+    </div>
+
+    <div class="botoes">
+      <button onclick="traduzir()">🚀 Traduzir pra Lua</button>
+      <button class="secundario" onclick="limpar()">🗑️ Limpar</button>
+    </div>
+
+    <div class="secao" style="margin-top: 15px;">
+      <div class="label">📜 Código Lua gerado</div>
+      <textarea id="saida" class="saida" readonly placeholder="O Lua aparece aqui..."></textarea>
+      <button style="margin-top: 10px;" onclick="copiar()">📋 Copiar Lua</button>
+    </div>
+
+    <div class="aviso">
+      ⚠️ Copie o Lua gerado e cole num <b>Script</b> no Roblox Studio.
+    </div>
+
+    <div class="ajuda">
+      <h3>📖 Comandos disponíveis</h3>
+
+      <div class="comando"><code>diz "texto"</code> → mostra na tela</div>
+      <div class="comando"><code>avisa "texto"</code> → aviso amarelo</div>
+      <div class="comando"><code>espera 1</code> → espera 1 segundo</div>
+      <div class="comando"><code>variavel x = 10</code> → cria variável</div>
+      <div class="comando"><code>cria parte "nome"</code> → cria peça</div>
+      <div class="comando"><code>se x &gt; 5 {</code> ... <code>}</code> → decisão</div>
+      <div class="comando"><code>} senao {</code> ... <code>}</code> → senão</div>
+      <div class="comando"><code>repete 3 {</code> ... <code>}</code> → loop</div>
+      <div class="comando"><code>enquanto x &lt; 10 {</code> ... <code>}</code> → loop infinito</div>
+      <div class="comando"><code>funcao nome() {</code> ... <code>}</code> → função</div>
+      <div class="comando"><code>retorna x</code> → retorna valor</div>
+      <div class="comando"><code># comentário</code> → comentário</div>
+    </div>
+  </div>
+
+<script>
+function traduzir() {
+  const entrada = document.getElementById("entrada").value;
+  const linhas = entrada.split("\n");
+  const saida = [];
+  let nivel = 0;
+  const espacos = (n) => "    ".repeat(n);
+
+  saida.push("-- Traduzido de MiguelLang");
+  saida.push("");
+
+  for (let linhaOriginal of linhas) {
+    let linha = linhaOriginal.trim();
+
+    // Linha vazia
+    if (!linha) {
+      saida.push("");
+      continue;
+    }
+
+    // Comentário
+    if (linha.startsWith("#")) {
+      saida.push(espacos(nivel) + "-- " + linha.substring(1).trim());
+      continue;
+    }
+
+    // Fechamento de bloco
+    if (linha === "}") {
+      nivel = Math.max(0, nivel - 1);
+      saida.push(espacos(nivel) + "end");
+      continue;
+    }
+
+    // } senao {
+    if (linha === "} senao {") {
+      nivel = Math.max(0, nivel - 1);
+      saida.push(espacos(nivel) + "else");
+      nivel++;
+      continue;
+    }
+
+    // } senaose cond {
+    let match = linha.match(/^\}\s*senaose\s+(.+?)\s*\{$/);
+    if (match) {
+      nivel = Math.max(0, nivel - 1);
+      saida.push(espacos(nivel) + "elseif " + match[1] + " then");
+      nivel++;
+      continue;
+    }
+
+    // diz "texto"
+    match = linha.match(/^diz\s+(.+)$/);
+    if (match) {
+      saida.push(espacos(nivel) + "print(" + match[1] + ")");
+      continue;
+    }
+
+    // avisa "texto"
+    match = linha.match(/^avisa\s+(.+)$/);
+    if (match) {
+      saida.push(espacos(nivel) + "warn(" + match[1] + ")");
+      continue;
+    }
+
+    // espera N
+    match = linha.match(/^espera\s+(.+)$/);
+    if (match) {
+      saida.push(espacos(nivel) + "task.wait(" + match[1] + ")");
+      continue;
+    }
+
+    // variavel x = valor
+    match = linha.match(/^variavel\s+(\w+)\s*=\s*(.+)$/);
+    if (match) {
+      saida.push(espacos(nivel) + "local " + match[1] + " = " + match[2]);
+      continue;
+    }
+
+    // se condicao {
+    match = linha.match(/^se\s+(.+?)\s*\{$/);
+    if (match) {
+      saida.push(espacos(nivel) + "if " + match[1] + " then");
+      nivel++;
+      continue;
+    }
+
+    // enquanto condicao {
+    match = linha.match(/^enquanto\s+(.+?)\s*\{$/);
+    if (match) {
+      saida.push(espacos(nivel) + "while " + match[1] + " do");
+      nivel++;
+      continue;
+    }
+
+    // repete N {
+    match = linha.match(/^repete\s+(.+?)\s*\{$/);
+    if (match) {
+      saida.push(espacos(nivel) + "for i = 1, " + match[1] + " do");
+      nivel++;
+      continue;
+    }
+
+    // funcao nome(args) {
+    match = linha.match(/^funcao\s+(\w+)\s*\((.*?)\)\s*\{$/);
+    if (match) {
+      saida.push(espacos(nivel) + "function " + match[1] + "(" + match[2] + ")");
+      nivel++;
+      continue;
+    }
+
+    // retorna X
+    match = linha.match(/^retorna\s+(.+)$/);
+    if (match) {
+      saida.push(espacos(nivel) + "return " + match[1]);
+      continue;
+    }
+
+    // cria parte
+    if (linha === "cria parte") {
+      saida.push(espacos(nivel) + 'local parte = Instance.new("Part")');
+      saida.push(espacos(nivel) + 'parte.Parent = workspace');
+      continue;
+    }
+
+    // cria parte "nome"
+    match = linha.match(/^cria parte\s+"(.+?)"$/);
+    if (match) {
+      const nome = match[1];
+      saida.push(espacos(nivel) + 'local ' + nome + ' = Instance.new("Part")');
+      saida.push(espacos(nivel) + nome + '.Parent = workspace');
+      continue;
+    }
+
+    // Não reconhecido - passa como tá
+    saida.push(espacos(nivel) + linha);
+  }
+
+  document.getElementById("saida").value = saida.join("\n");
+}
+
+function copiar() {
+  const saida = document.getElementById("saida");
+  if (!saida.value) return;
+
+  navigator.clipboard.writeText(saida.value).then(() => {
+    const btn = event.target;
+    const original = btn.innerText;
+    btn.innerText = "✅ Copiado!";
+    setTimeout(() => btn.innerText = original, 1500);
+  });
+}
+
+function limpar() {
+  document.getElementById("entrada").value = "";
+  document.getElementById("saida").value = "";
+}
+</script>
+</body>
+</html>
